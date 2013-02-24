@@ -6,8 +6,11 @@
 
 (declare state-t)
 
+(defn run-state-t* [m computation initial-state]
+  ((run-monad m computation) initial-state))
+
 (defn run-state-t [m computation initial-state]
-  (monads.types/run-tramp* ((run-monad m computation) initial-state)))
+  (monads.types/run-tramp* (run-state-t* m computation initial-state)))
 
 (defn- state-t* [inner]
   (let [i-return (:return inner)]
@@ -17,12 +20,13 @@
      :bind (fn [m f]
              (Done.
               (fn [s]
-                
                 (run-mdo inner
-                         ^Pair p <- (monads.types/run-tramp* (m s))
-                         let v = (fst p) s = (snd p)                         
-                         (Done. (run-state-t (state-t inner)
-                                             (f v) s))))))
+                         (Cont. (fn [] (m s))
+                                (fn [^Pair p]
+                                  (let [v (fst p)
+                                        s (snd p)]
+                                    (run-state-t* (state-t inner)
+                                                  (f v) s))))))))
      :monadfail (when (:monadfail inner)
                   {:mfail (curryfn [str _] ((-> inner :monadfail :mfail) str))})
      :monadplus (when (:monadplus inner)
@@ -32,8 +36,8 @@
                      :mplus (curryfn [leftright s]
                               (i-plus
                                (lazy-pair
-                                (run-state-t (state-t inner) (first leftright) s)
-                                (run-state-t (state-t inner) (second leftright) s))))}))
+                                (run-state-t* (state-t inner) (first leftright) s)
+                                (run-state-t* (state-t inner) (second leftright) s))))}))
      :monadtrans {:lift (curryfn [m s]
                           (run-mdo inner
                                    v <- m
