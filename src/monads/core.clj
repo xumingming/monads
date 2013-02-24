@@ -19,7 +19,7 @@
   (>>= m (fn [_] c)))
 
 (defn run-monad [m computation]
-  (types/mrun computation m))
+  (types/run-tramp* (types/mrun computation m)))
 
 (defmacro monad [& {:as params}]
   `(let [params# (s/rename-keys ~params {:>>= :bind})]

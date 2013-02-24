@@ -1,34 +1,45 @@
 (ns monads.types)
 
+(deftype More [t]
+  Object
+  (toString [this] (with-out-str (print t))))
+(deftype Cont [a f]
+  Object
+  (toString [this] (with-out-str (print [a f]))))
+(deftype Done [v]
+  Object
+  (toString [this] (with-out-str (print v))))
+
 (defprotocol MRun
   (mrun [this m]))
 
 (extend-protocol MRun
   Object
-  (mrun [this _] this)
+  (mrun [this _] (Done. this))
   nil
-  (mrun [this _] nil))
+  (mrun [this _] (Done. nil)))
 
 (deftype Return [v]
   Object
   (toString [this]
     (with-out-str (print v)))
   MRun
-  (mrun [_ m] ((:return m) v)))
+  (mrun [_ m] (Done. ((:return m) v))))
 
 (deftype Returned [v]
   Object
   (toString [this]
     (with-out-str (print v)))
   MRun
-  (mrun [_ m] (v m)))
+  (mrun [_ m] (Done. (v m))))
 
 (deftype Bind [comp f]
   Object
   (toString [this]
     (with-out-str (print [comp f])))
   MRun
-  (mrun [_ m]  ((:bind m) (mrun comp m) f)))
+  (mrun [_ m] (Cont. (More. (fn [] (println comp) (mrun comp m)))
+                     (fn [comp] (println "computed: " comp) ((:bind m) comp f)))))
 
 (deftype Pair [fst snd]
   clojure.lang.Seqable
@@ -91,3 +102,38 @@
     (on-just (from-just m))
     on-nothing))
 
+
+(defn run-tramp [cur]
+  (loop [cur cur res nil stack ()]
+    (if (not (nil? res))
+      (from-just res)
+      (case (:type cur)
+        :done (if (empty? stack)
+                (:val cur)
+                (recur (((first stack) (:val cur))) nil (rest stack)))
+        :more (recur ((:t cur)) nil stack)
+        :cont (recur (:a cur) nil (cons (:f cur) stack))))))
+
+(declare is-odd?)
+(defn is-even? [n]
+  (if (== n 0)
+    {:type :done :val true}
+    {:type :more :t (fn [] (is-odd? (- n 1)))}))
+(defn is-odd? [n]
+  (if (== n 1)
+    {:type :done :val true}
+    {:type :more :t (fn [] (is-even? (- n 1)))}))
+
+
+(defn run-tramp* [cur]
+  (loop [cur cur stack ()]
+    (println cur)
+    (condp instance? cur
+      Done (let [^Done cur cur]
+             (if (empty? stack)
+               (.v cur)
+               (recur ((first stack) (.v cur)) (rest stack))))
+      More (let [^More cur cur]
+             (recur ((.t cur)) stack))
+      Cont (let [^Cont cur cur]
+             (recur (.a cur) (cons (.f cur) stack))))))
