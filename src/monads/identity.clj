@@ -1,6 +1,8 @@
 (ns monads.identity
-  (:use [monads.core :only [defmonad]]))
+  (:require [monads.core :refer :all])
+  (:import [monads.types Done Cont]))
 
 (defmonad identity-m
-  :bind (fn [m f] (f m))
+  :bind (fn [m f]
+          (Done. (run-monad identity-m (f m))))
   :return identity)

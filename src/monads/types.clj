@@ -1,8 +1,5 @@
 (ns monads.types)
 
-(deftype More [t]
-  Object
-  (toString [this] (with-out-str (print t))))
 (deftype Cont [a f]
   Object
   (toString [this] (with-out-str (print [a f]))))
@@ -38,8 +35,8 @@
   (toString [this]
     (with-out-str (print [comp f])))
   MRun
-  (mrun [_ m] (Cont. (More. (fn [] (println comp) (mrun comp m)))
-                     (fn [comp] (println "computed: " comp) ((:bind m) comp f)))))
+  (mrun [_ m] (Cont. (fn [] (mrun comp m))
+                     (fn [comp] ((:bind m) comp f)))))
 
 (deftype Pair [fst snd]
   clojure.lang.Seqable
@@ -127,13 +124,10 @@
 
 (defn run-tramp* [cur]
   (loop [cur cur stack ()]
-    (println cur)
     (condp instance? cur
       Done (let [^Done cur cur]
              (if (empty? stack)
                (.v cur)
                (recur ((first stack) (.v cur)) (rest stack))))
-      More (let [^More cur cur]
-             (recur ((.t cur)) stack))
       Cont (let [^Cont cur cur]
-             (recur (.a cur) (cons (.f cur) stack))))))
+             (recur ((.a cur)) (cons (.f cur) stack))))))
