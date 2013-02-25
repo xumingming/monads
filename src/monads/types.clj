@@ -99,29 +99,6 @@
     (on-just (from-just m))
     on-nothing))
 
-
-(defn run-tramp [cur]
-  (loop [cur cur res nil stack ()]
-    (if (not (nil? res))
-      (from-just res)
-      (case (:type cur)
-        :done (if (empty? stack)
-                (:val cur)
-                (recur (((first stack) (:val cur))) nil (rest stack)))
-        :more (recur ((:t cur)) nil stack)
-        :cont (recur (:a cur) nil (cons (:f cur) stack))))))
-
-(declare is-odd?)
-(defn is-even? [n]
-  (if (== n 0)
-    {:type :done :val true}
-    {:type :more :t (fn [] (is-odd? (- n 1)))}))
-(defn is-odd? [n]
-  (if (== n 1)
-    {:type :done :val true}
-    {:type :more :t (fn [] (is-even? (- n 1)))}))
-
-
 (defn run-tramp* [cur]
   (loop [cur cur stack ()]
     (condp instance? cur
