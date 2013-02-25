@@ -38,9 +38,10 @@
                                 (run-state-t* (state-t inner) (first leftright) s)
                                 (run-state-t* (state-t inner) (second leftright) s))))}))
      :monadtrans {:lift (curryfn [m s]
-                          (run-mdo inner
-                                   v <- m
-                                   (return (Pair. v s))))})))
+                          (Done.
+                           (run-mdo inner
+                                    v <- m
+                                    (return (Pair. v s)))))})))
 (def state-t (memoize state-t*))
 
 (declare run-state*)
