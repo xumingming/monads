@@ -20,13 +20,12 @@
      :bind (fn [m f]
              (Done.
               (fn [s]
-                (run-mdo inner
-                         (Cont. (fn [] (m s))
-                                (fn [^Pair p]
-                                  (let [v (fst p)
-                                        s (snd p)]
-                                    (run-state-t* (state-t inner)
-                                                  (f v) s))))))))
+                (Cont. (fn [] (m s))
+                       (fn [comp]
+                         (run-mdo inner
+                                  ^Pair p <- comp
+                                  let v = (fst p), s = (snd p)
+                                  (run-state-t* (state-t inner) (f v) s)))))))
      :monadfail (when (:monadfail inner)
                   {:mfail (curryfn [str _] ((-> inner :monadfail :mfail) str))})
      :monadplus (when (:monadplus inner)

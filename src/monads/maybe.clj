@@ -1,5 +1,6 @@
 (ns monads.maybe
   (:require [monads.core :refer :all])
+  (:import [monads.types Done])
   (:use [monads.types :only [from-just nothing? just nothing maybe]]
         [monads.util :only [lift-m]]))
 
@@ -23,8 +24,8 @@
 (defmonad maybe-m
   :return just
   :bind (fn [m f]
-          (let [v (run-monad maybe-m m)]
-            (when v (run-monad maybe-m (f (from-just v))))))
+          (Done.
+           (when m (run-monad maybe-m (f (from-just m))))))
   :monadfail {:mfail (constantly nothing)}
   :monadplus {:mzero nothing
               :mplus (fn [lr]
