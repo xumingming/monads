@@ -29,7 +29,7 @@
   (toString [this]
     (with-out-str (print v)))
   MRun
-  (mrun [_ m] (Done. (v m))))
+  (mrun [_ m] (v m)))
 
 (deftype Bind [comp f]
   Object

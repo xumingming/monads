@@ -1,6 +1,6 @@
 (ns monads.maybe
   (:require [monads.core :refer :all])
-  (:import [monads.types Done])
+  (:import [monads.types Done Cont])
   (:use [monads.types :only [from-just nothing? just nothing maybe]]
         [monads.util :only [lift-m]]))
 
@@ -27,12 +27,14 @@
           (if m
             (run-monad* maybe-m (f (from-just m)))
             (Done. nil)))
-  :monadfail {:mfail (constantly nothing)}
-  :monadplus {:mzero nothing
+  :monadfail {:mfail (constantly (Done. nothing))}
+  :monadplus {:mzero (Done. nothing)
               :mplus (fn [lr]
-                       (let [lv (run-monad maybe-m (first lr))]
-                         (or lv
-                             (run-monad maybe-m (second lr)))))})
+                       (Cont. (fn [] (run-monad* maybe-m (first lr)))
+                              (fn [lv]
+                                (if lv
+                                  (run-monad* maybe-m (second lr))
+                                  (Done. nil)))))})
 
 (def m maybe-m)
 (def t maybe-t)
