@@ -1,8 +1,8 @@
 (ns monads.state
   (:require [monads.core :refer :all])
-  (:use [monads.types :only [fst snd run-tramp]]
+  (:use [monads.types :only [fst snd run-tramp tlet]]
         [monads.util :only [curryfn lazy-pair if-inner-return lift-m]])
-  (:import [monads.types Returned Pair Cont Done]))
+  (:import [monads.types Returned Pair Done]))
 
 (declare state-t)
 
@@ -20,12 +20,11 @@
      :bind (fn [m f]
              (Done.
               (fn [s]
-                (Cont. (fn [] (m s))
-                       (fn [comp]
-                         (run-mdo inner
-                                  ^Pair p <- comp
-                                  let v = (fst p), s = (snd p)
-                                  (run-state-t* (state-t inner) (f v) s)))))))
+                (tlet [comp (m s)]
+                  (run-mdo inner
+                           ^Pair p <- comp
+                           let v = (fst p), s = (snd p)
+                           (run-state-t* (state-t inner) (f v) s))))))
      :monadfail (when (:monadfail inner)
                   {:mfail (curryfn [str _] ((-> inner :monadfail :mfail) str))})
      :monadplus (when (:monadplus inner)
@@ -51,9 +50,8 @@
   :bind (fn [m f]
           (Done.
            (fn [s]
-             (Cont. (fn [] (m s))
-                    (fn [^Pair p]
-                      (run-state* (f (fst p)) (snd p))))))))
+             (tlet [^Pair p (m s)]
+               (run-state* (f (fst p)) (snd p)))))))
 
 (defn run-state* [computation initial-state]
   ((run-monad state-m computation) initial-state))

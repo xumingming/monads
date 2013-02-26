@@ -7,6 +7,15 @@
   Object
   (toString [this] (with-out-str (print v))))
 
+(defmacro cont [a f]
+  `(Cont. (fn [] ~a)
+          ~f))
+
+;; i.e., "tail let". Would be nice to support multiple minding exprs,
+;; but, eh.
+(defmacro tlet [[binding expr] & forms]
+  `(cont ~expr (fn [~binding] ~@forms)))
+
 (defprotocol MRun
   (mrun [this m]))
 

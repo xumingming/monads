@@ -1,7 +1,7 @@
 (ns monads.error
   (:require [monads.core :refer :all])
   (:use [monads.util :only [if-inner-return]]
-        [monads.types :only [from-right from-left right left left? either ->Done]])
+        [monads.types :only [from-right from-left right left left? either ->Done tlet]])
   (:import [monads.types Returned Either Done Cont]))
 
 
@@ -26,21 +26,20 @@
                                      (run-monad (error-t inner) (second lr))
                                      l)))})))
 
-(let [mzero (left nil)]
-  (defmonad error-m
-    :return right
-    :bind (fn [m f]
-            (either (comp ->Done left)
-                    (fn [x] (run-monad* error-m (f x)))
-                    m))
-    :monadfail {:mfail (comp ->Done left)}
-    :monadplus {:mzero (Done. mzero)
-                :mplus (fn [lr]
-                         (Cont. (fn [] (run-monad* error-m (first lr)))
-                                (fn [lv]
-                                  (if (left? lv)
-                                    (run-monad* error-m (second lr))
-                                    (Done. lv)))))}))
+
+(defmonad error-m
+  :return right
+  :bind (fn [m f]
+          (either (comp ->Done left)
+                  (fn [x] (run-monad* error-m (f x)))
+                  m))
+  :monadfail {:mfail (comp ->Done left)}
+  :monadplus {:mzero (Done. (left nil))
+              :mplus (fn [lr]
+                       (tlet [lv (run-monad* error-m (first lr))]
+                         (if (left? lv)
+                           (run-monad* error-m (second lr))
+                           (Done. lv))))})
 
 (defn throw-error [e] (Returned. (fn [m]
                                    (if-inner-return m
