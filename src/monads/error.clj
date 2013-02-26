@@ -44,18 +44,20 @@
                            (Done. lv))))})
 
 (defn throw-error [e] (Returned. (fn [m]
-                                   (if-inner-return m
-                                     (i-return (left e))
-                                     (left e)))))
-(defn catch-error [comp handler]
+                                   (Done.
+                                    (if-inner-return m
+                                      (i-return (left e))
+                                      (left e))))))
+(defn catch-error [computation handler]
   (Returned. (fn [m]
-               (if-inner-return m
-                 (run-mdo (:inner m)
-                          v <- (run-monad m comp)
-                          (either #(run-monad m (handler %))
-                                  (comp i-return right) v))
-                 (let [v (run-monad m comp)]
-                   (either #(run-monad m (handler %)) right v))))))
+               (Done.
+                (if-inner-return m
+                  (run-mdo (:inner m)
+                           v <- (run-monad m computation)
+                           (either #(run-monad m (handler %))
+                                   (comp i-return right) v))
+                  (let [v (run-monad m computation)]
+                    (either #(run-monad m (handler %)) right v)))))))
 
 (def error-t (memoize error-t*))
 
