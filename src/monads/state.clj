@@ -59,17 +59,22 @@
 (defn run-state [computation initial-state]
   (monads.types/run-tramp (run-state* computation initial-state)))
 
-(def get-state (Returned. (curryfn [m s]
+(def get-state (Returned. (fn [m]
                             (Done.
-                             (if-inner-return m
-                               (i-return (Pair. s s))
-                               (Pair. s s))))))
+                             (fn [s]
+                               (Done.
+                                (if-inner-return m
+                                                 (i-return (Pair. s s))
+                                                 (Pair. s s))))))))
 
-(defn put-state [v] (Returned. (curryfn [m s]
-                                 (Done.
-                                  (if-let [i-return (-> m :inner :return)]
-                                    (i-return (Pair. nil v))
-                                    (Pair. nil v))))))
+(defn put-state [v] (Returned.
+                     (fn [m]
+                       (Done.
+                        (fn [s]
+                          (Done. 
+                           (if-let [i-return (-> m :inner :return)]
+                             (i-return (Pair. nil v))
+                             (Pair. nil v))))))))
 
 (defn modify [f] (>>= get-state (comp put-state f)))
 
