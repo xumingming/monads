@@ -21,7 +21,8 @@
   (toString [this]
     (with-out-str (print v)))
   MRun
-  (mrun [_ m] (Done. ((:return m) v))))
+  (mrun [_ m]
+    (Done. ((:return m) v))))
 
 (deftype Returned [v]
   Object
@@ -99,7 +100,7 @@
     (on-just (from-just m))
     on-nothing))
 
-(defn run-tramp* [cur]
+(defn run-tramp [cur]
   (loop [cur cur stack ()]
     (condp instance? cur
       Done (let [^Done cur cur]

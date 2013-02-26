@@ -24,8 +24,9 @@
 (defmonad maybe-m
   :return just
   :bind (fn [m f]
-          (Done.
-           (when m (run-monad maybe-m (f (from-just m))))))
+          (if m
+            (run-monad* maybe-m (f (from-just m)))
+            (Done. nil)))
   :monadfail {:mfail (constantly nothing)}
   :monadplus {:mzero nothing
               :mplus (fn [lr]

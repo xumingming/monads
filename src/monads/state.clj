@@ -1,6 +1,6 @@
 (ns monads.state
   (:require [monads.core :refer :all])
-  (:use [monads.types :only [fst snd]]
+  (:use [monads.types :only [fst snd run-tramp]]
         [monads.util :only [curryfn lazy-pair if-inner-return lift-m]])
   (:import [monads.types Returned Pair Cont Done]))
 
@@ -10,7 +10,7 @@
   ((run-monad m computation) initial-state))
 
 (defn run-state-t [m computation initial-state]
-  (monads.types/run-tramp* (run-state-t* m computation initial-state)))
+  (monads.types/run-tramp (run-state-t* m computation initial-state)))
 
 (defn- state-t* [inner]
   (let [i-return (:return inner)]
@@ -59,7 +59,7 @@
   ((run-monad state-m computation) initial-state))
 
 (defn run-state [computation initial-state]
-  (monads.types/run-tramp* (run-state* computation initial-state)))
+  (monads.types/run-tramp (run-state* computation initial-state)))
 
 (def get-state (Returned. (curryfn [m s]
                             (Done.

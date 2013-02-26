@@ -2,7 +2,7 @@
   (:require [monads.core :refer :all])
   (:use [monads.util :only [if-inner-return]]
         [monads.types :only [from-right from-left right left left? either]])
-  (:import [monads.types Returned Either]))
+  (:import [monads.types Returned Either Done Cont]))
 
 
 (declare error-t)
@@ -30,8 +30,9 @@
   (defmonad error-m
     :return right
     :bind (fn [m f]
-            (let [r (run-monad error-m m)]
-              (either left #(run-monad error-m (f %)) r)))
+            (either #(Done. (left %))
+                    (fn [x] (run-monad* error-m (f x)))
+                    m))
     :monadfail {:mfail left}
     :monadplus {:mzero mzero
                 :mplus (fn [lr]
