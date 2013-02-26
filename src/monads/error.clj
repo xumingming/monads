@@ -8,14 +8,14 @@
 (declare error-t)
 (defn error-t* [inner]
   (let [i-return (:return inner)
-        exit (comp ->Done i-return left)]
+        fail (comp ->Done i-return left)]
     (monad
      :inner inner
      :return (comp i-return right)
      :bind (fn [m f]
              (run-mdo inner 
                       x <- (run-monad (error-t inner) m)
-                      (either exit
+                      (either fail
                               #(run-monad* (error-t inner) (f %)) x)))
      :monadtrans {:lift (fn [m] (run-monad* inner (>>= m (comp i-return right))))}
      :monadfail {:mfail (comp ->Done i-return left)}
@@ -29,19 +29,20 @@
                                        (Done. l)))))})))
 
 
-(defmonad error-m
-  :return right
-  :bind (fn [m f]
-          (either (comp ->Done left)
-                  (fn [x] (run-monad* error-m (f x)))
-                  m))
-  :monadfail {:mfail (comp ->Done left)}
-  :monadplus {:mzero (Done. (left nil))
-              :mplus (fn [lr]
-                       (tlet [lv (run-monad* error-m (first lr))]
-                         (if (left? lv)
-                           (run-monad* error-m (second lr))
-                           (Done. lv))))})
+(let [fail #(Done. (left %))]
+  (defmonad error-m
+    :return right
+    :bind (fn [m f]
+            (either fail
+                    (fn [x] (run-monad* error-m (f x)))
+                    m))
+    :monadfail {:mfail fail}
+    :monadplus {:mzero (Done. (left nil))
+                :mplus (fn [lr]
+                         (tlet [lv (run-monad* error-m (first lr))]
+                           (if (left? lv)
+                             (run-monad* error-m (second lr))
+                             (Done. lv))))}))
 
 (defn throw-error [e] (Returned. (fn [m]
                                    (Done.
