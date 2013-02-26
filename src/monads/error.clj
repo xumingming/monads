@@ -48,6 +48,10 @@
                                     (if-inner-return m
                                       (i-return (left e))
                                       (left e))))))
+
+;;; it seems as if all the stuff in here ought to be trampolined as
+;;; well. But perhaps that would only matter with deeply-nested
+;;; catch-errors? (e.g. (catch-error (catch-error ...) ...))?
 (defn catch-error [computation handler]
   (Returned. (fn [m]
                (Done.
