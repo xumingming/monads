@@ -32,8 +32,8 @@
               :mplus (fn [lr]
                        (tlet [lv (run-monad* maybe-m (first lr))]
                          (if lv
-                           (run-monad* maybe-m (second lr))
-                           (Done. nil))))})
+                           (Done. lv)
+                           (run-monad* maybe-m (second lr)))))})
 
 (def m maybe-m)
 (def t maybe-t)
