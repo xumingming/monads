@@ -45,8 +45,8 @@
   (toString [this]
     (with-out-str (print [comp f])))
   MRun
-  (mrun [_ m] (Cont. (fn [] (mrun comp m))
-                     (fn [comp] ((:bind m) comp f)))))
+  (mrun [_ m] (tlet [comp (mrun comp m)]
+                ((:bind m) comp f))))
 
 (deftype Pair [fst snd]
   clojure.lang.Seqable
