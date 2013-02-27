@@ -7,14 +7,14 @@
   Object
   (toString [this] (with-out-str (print v))))
 
-(defmacro cont [a f]
-  `(Cont. (fn [] ~a)
-          ~f))
-
-;; i.e., "tail let". Would be nice to support multiple minding exprs,
-;; but, eh.
-(defmacro tlet [[binding expr] & forms]
-  `(cont ~expr (fn [~binding] ~@forms)))
+;; note that this is itself a monadic bind operation, with "return"
+;; being the Done constructor.
+;; AFAICT we need a macro so as to delay the evaluation of expr,
+;; without which this would be pointless.
+(defmacro tlet [[binding expr & rest] & forms]
+  `(Cont. (fn [] ~expr) (fn [~binding] ~@(if (seq rest)
+                                         `((tlet ~rest ~@forms))
+                                         forms))))
 
 (defprotocol MRun
   (mrun [this m]))
