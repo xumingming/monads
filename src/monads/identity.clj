@@ -6,3 +6,5 @@
   :bind (fn [m f]
           (Done. (run-monad identity-m (f m))))
   :return identity)
+
+(def m identity-m)

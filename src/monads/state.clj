@@ -7,10 +7,10 @@
 (declare state-t)
 
 (defn run-state-t* [m computation initial-state]
-  ((run-monad m computation) initial-state))
+  (tlet [f (run-monad* m computation)]
+    (f initial-state)))
 
-(defn run-state-t [m computation initial-state]
-  (monads.types/run-tramp (run-state-t* m computation initial-state)))
+(def run-state-t (comp run-tramp run-state-t*))
 
 (defn- state-t* [inner]
   (let [i-return (:return inner)]
@@ -30,7 +30,7 @@
      :monadplus (when (:monadplus inner)
                   (let [i-plus (-> inner :monadplus :mplus)
                         i-zero (-> inner :monadplus :mzero)]
-                    {:mzero (fn [_] i-zero)
+                    {:mzero (Done. (fn [_] i-zero))
                      :mplus (curryfn [leftright s]
                               (i-plus
                                (lazy-pair
@@ -54,10 +54,10 @@
                (run-state* (f (fst p)) (snd p)))))))
 
 (defn run-state* [computation initial-state]
-  ((run-monad state-m computation) initial-state))
+  (tlet [f (run-monad* state-m computation)]
+    (f initial-state)))
 
-(defn run-state [computation initial-state]
-  (monads.types/run-tramp (run-state* computation initial-state)))
+(def run-state (comp run-tramp run-state*))
 
 (def get-state (Returned. (fn [m]
                             (Done.
