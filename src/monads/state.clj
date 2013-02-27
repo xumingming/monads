@@ -34,9 +34,9 @@
                      :mplus (fn [leftright]
                               (Done.
                                (fn [s]
-                                 (i-plus
-                                  (lazy-pair (run-state-t* (state-t inner) (first leftright) s)
-                                             (run-state-t* (state-t inner) (second leftright) s))))))}))
+                                 (tlet [lv (run-state-t* (state-t inner) (first leftright) s)]
+                                   (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
+                                     (i-plus [lv rv]))))))}))
      :monadtrans {:lift (fn [m]
                           (Done. (fn [s]
                                    (Done.
