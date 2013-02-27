@@ -26,7 +26,7 @@
                                      l <- comp
                                      (if (left? l)
                                        (run-monad* (error-t inner) (second lr))
-                                       (Done. l)))))})))
+                                       (Done. (i-return l))))))})))
 
 
 (let [fail #(Done. (left %))]
