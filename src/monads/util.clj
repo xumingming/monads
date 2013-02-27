@@ -1,10 +1,11 @@
 (ns monads.util
   (:require [the.parsatron :as parsatron]
             [macroparser.functions :as functions]
-            [macroparser.bindings :as bindings])
+            [macroparser.bindings :as bindings]
+            [monads.types :as types])
   (:use [monads.core :only [mzero >>= mdo return]]))
 
-(defmacro curryfn [& args]
+(defn- curryfn-maker [wrap args]
   (let [parsed (parsatron/run (functions/parse-fn-like)
                               (if (and (== 1 (count args))
                                        (#{'fn 'fn*} (ffirst args)))
@@ -14,13 +15,22 @@
         arity (first arities)
         bindings (map bindings/unparse-bindings (:bindings (:params arity)))
         body (reduce (fn [acc binding]
-                       `(fn [~binding] ~acc))
+                       `(fn [~binding] ~(if wrap
+                                         `(~wrap ~acc)
+                                         acc)))
                      `(do ~@(:body arity))
                      (reverse bindings))]
     (assert (== 1 (count arities)) "Can't curry multi-arity functions")
     (assert (nil? (-> arity :bindings :rest)) "Can't curry functions with rest args")
     body))
 
+(defmacro curryfn [& args]
+  (let [body (curryfn-maker nil args)]
+    body))
+
+(defmacro tcurryfn [& args]
+  (let [body (curryfn-maker `types/->Done args)]
+    body))
 
 (defn lift-m
   ([f] #(lift-m f %))

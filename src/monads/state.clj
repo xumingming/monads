@@ -1,7 +1,7 @@
 (ns monads.state
   (:require [monads.core :refer :all])
   (:use [monads.types :only [fst snd run-tramp tlet]]
-        [monads.util :only [curryfn lazy-pair if-inner-return lift-m]])
+        [monads.util :only [curryfn tcurryfn lazy-pair if-inner-return lift-m]])
   (:import [monads.types Returned Pair Done]))
 
 (declare state-t)
@@ -26,7 +26,7 @@
                            let v = (fst p), s = (snd p)
                            (run-state-t* (state-t inner) (f v) s))))))
      :monadfail (when (:monadfail inner)
-                  {:mfail (curryfn [str _] ((-> inner :monadfail :mfail) str))})
+                  {:mfail (tcurryfn [str _] ((-> inner :monadfail :mfail) str))})
      :monadplus (when (:monadplus inner)
                   (let [i-plus (-> inner :monadplus :mplus)
                         i-zero (-> inner :monadplus :mzero)]
@@ -38,12 +38,10 @@
                           (tlet [lv (run-state-t* (state-t inner) (first leftright) s)
                                  rv (run-state-t* (state-t inner) (second leftright) s)]
                             (i-plus [lv rv])))))}))
-     :monadtrans {:lift (fn [m]
-                          (Done. (fn [s]
-                                   (Done.
-                                    (run-mdo inner
-                                             v <- m
-                                             (return (Pair. v s)))))))})))
+     :monadtrans {:lift (tcurryfn [m s]
+                          (run-mdo inner
+                                   v <- m
+                                   (return (Pair. v s))))})))
 (def state-t (memoize state-t*))
 
 (declare run-state*)
@@ -62,22 +60,16 @@
 
 (def run-state (comp run-tramp run-state*))
 
-(def get-state (Returned. (fn [m]
-                            (Done.
-                             (fn [s]
-                               (Done.
-                                (if-inner-return m
-                                                 (i-return (Pair. s s))
-                                                 (Pair. s s))))))))
+(def get-state (Returned. (tcurryfn [m s] 
+                            (if-inner-return m
+                              (i-return (Pair. s s))
+                              (Pair. s s)))))
 
 (defn put-state [v] (Returned.
-                     (fn [m]
-                       (Done.
-                        (fn [s]
-                          (Done. 
-                           (if-let [i-return (-> m :inner :return)]
-                             (i-return (Pair. nil v))
-                             (Pair. nil v))))))))
+                     (tcurryfn [m s]
+                       (if-let [i-return (-> m :inner :return)]
+                         (i-return (Pair. nil v))
+                         (Pair. nil v)))))
 
 (defn modify [f] (>>= get-state (comp put-state f)))
 
