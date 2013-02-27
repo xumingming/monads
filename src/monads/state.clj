@@ -31,12 +31,13 @@
                   (let [i-plus (-> inner :monadplus :mplus)
                         i-zero (-> inner :monadplus :mzero)]
                     {:mzero (Done. (fn [_] i-zero))
-                     :mplus (fn [leftright]
-                              (Done.
-                               (fn [s]
-                                 (tlet [lv (run-state-t* (state-t inner) (first leftright) s)]
-                                   (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
-                                     (i-plus [lv rv]))))))}))
+                     :mplus
+                     (fn [leftright]
+                       (Done.
+                        (fn [s]
+                          (tlet [lv (run-state-t* (state-t inner) (first leftright) s)
+                                 rv (run-state-t* (state-t inner) (second leftright) s)]
+                            (i-plus [lv rv])))))}))
      :monadtrans {:lift (fn [m]
                           (Done. (fn [s]
                                    (Done.
