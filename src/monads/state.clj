@@ -26,7 +26,7 @@
                            let v = (fst p), s = (snd p)
                            (run-state-t* (state-t inner) (f v) s))))))
      :monadfail (when (:monadfail inner)
-                  {:mfail (tcurryfn [str _] ((-> inner :monadfail :mfail) str))})
+                  {:mfail (fn [str] (Done. (constantly ((-> inner :monadfail :mfail) str))))})
      :monadplus (when (:monadplus inner)
                   (let [i-plus (-> inner :monadplus :mplus)
                         i-zero (-> inner :monadplus :mzero)]
