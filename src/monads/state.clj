@@ -31,16 +31,18 @@
                   (let [i-plus (-> inner :monadplus :mplus)
                         i-zero (-> inner :monadplus :mzero)]
                     {:mzero (Done. (fn [_] i-zero))
-                     :mplus (curryfn [leftright s]
-                              (i-plus
-                               (lazy-pair
-                                (run-state-t* (state-t inner) (first leftright) s)
-                                (run-state-t* (state-t inner) (second leftright) s))))}))
-     :monadtrans {:lift (curryfn [m s]
-                          (Done.
-                           (run-mdo inner
-                                    v <- m
-                                    (return (Pair. v s)))))})))
+                     :mplus (fn [leftright]
+                              (Done.
+                               (fn [s]
+                                 (i-plus
+                                  (lazy-pair (run-state-t* (state-t inner) (first leftright) s)
+                                             (run-state-t* (state-t inner) (second leftright) s))))))}))
+     :monadtrans {:lift (fn [m]
+                          (Done. (fn [s]
+                                   (Done.
+                                    (run-mdo inner
+                                             v <- m
+                                             (return (Pair. v s)))))))})))
 (def state-t (memoize state-t*))
 
 (declare run-state*)
