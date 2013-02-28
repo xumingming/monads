@@ -1,9 +1,9 @@
 (ns monads.writer
   (:require [monads.core :refer :all])
-  (:use [monads.types :only [fst snd]]
+  (:use [monads.types :only [fst snd tlet]]
         [monads.util :only [if-inner-return lazy-pair]]
         [babbage.monoid :only [<>]])
-  (:import [monads.types Returned Pair]))
+  (:import [monads.types Returned Pair Done]))
 
 
 (declare writer-t)
@@ -42,18 +42,16 @@
 (defmonad writer-m
   :return (fn [v] (Pair. v nil))
   :bind (fn [m f]
-          (let [^Pair p (run-monad writer-m m)
-                a (fst p)
-                w (snd p)
-                ^Pair p (run-monad writer-m (f a))
-                b (fst p)
-                w' (snd p)]
-            (Pair. b (<> w w')))))
+          (tlet [^Pair p (run-monad* writer-m m)
+                 ^Pair p2 (run-monad* writer-m (f (fst p)))]
+            (Done. (Pair. (fst p2) (<> (snd p) (snd p2)))))))
 
-(defn tell [w] (Returned. (fn [m]
-                            (if-inner-return m
-                              (i-return (Pair. nil w))
-                              (Pair. nil w)))))
+(defn tell [w] (Returned.
+                (fn [m]
+                  (Done.
+                   (if-inner-return m
+                     (i-return (Pair. nil w))
+                     (Pair. nil w))))))
 
 (defn listen [comp] (Returned.
                      (fn [m]
