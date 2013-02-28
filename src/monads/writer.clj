@@ -58,13 +58,14 @@
 
 (defn listen [comp] (Returned.
                      (fn [m]
-                       (Done.
-                        (if-inner-return m
-                          (run-mdo (:inner m)
-                                   ^Pair p <- (run-monad m comp)
-                                   (return (Pair. [(fst p) (snd p)] (snd p))))
-                          (tlet [^Pair p (run-monad* m comp)]
-                            (Pair. [(fst p) (snd p)] (snd p))))))))
+                       (if-inner-return m
+                         (tlet [comp (run-monad* m comp)]
+                           (Done.
+                            (run-mdo (:inner m)
+                                     ^Pair p <- comp
+                                     (return (Pair. [(fst p) (snd p)] (snd p))))))
+                         (tlet [^Pair p (run-monad* m comp)]
+                           (Done. (Pair. [(fst p) (snd p)] (snd p))))))))
 
 (defn pass [comp] (Returned.
                    (fn [m]
