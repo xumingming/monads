@@ -30,12 +30,15 @@
                                        (run-monad (writer-t inner) (first lr))
                                        (run-monad (writer-t inner) (second lr)))))}))
      :bind (fn [m f]
-             (run-mdo inner
-                      ^Pair p <- (run-monad (writer-t inner) m)
-                      let a = (fst p) w = (snd p)
-                      ^Pair p <- (run-monad (writer-t inner) (f a))
-                      let b = (fst p) w' = (snd p)
-                      (return (Pair. b (<> w w'))))))))
+             (tlet [wrapped-p (run-monad* (writer-t inner) m)]
+               (run-mdo inner
+                        ^Pair p <- wrapped-p
+                        let a = (fst p), b = (snd p)
+                        (tlet [wrapped-p (run-monad* (writer-t inner) (f a))]
+                          (run-monad* inner (mdo
+                                             ^Pair p <- wrapped-p
+                                             (return (Pair. (fst p) (<> b (snd p)))))))))
+))))
 
 (def writer-t (memoize writer-t*))
 
@@ -55,12 +58,13 @@
 
 (defn listen [comp] (Returned.
                      (fn [m]
-                       (if-inner-return m
-                        (run-mdo (:inner m)
-                                 ^Pair p <- (run-monad m comp)
-                                 (return (Pair. [(fst p) (snd p)] (snd p))))
-                        (let [^Pair p (run-monad m comp)]
-                          (Pair. [(fst p) (snd p)] (snd p)))))))
+                       (Done.
+                        (if-inner-return m
+                          (run-mdo (:inner m)
+                                   ^Pair p <- (run-monad m comp)
+                                   (return (Pair. [(fst p) (snd p)] (snd p))))
+                          (tlet [^Pair p (run-monad* m comp)]
+                            (Pair. [(fst p) (snd p)] (snd p))))))))
 
 (defn pass [comp] (Returned.
                    (fn [m]
@@ -69,7 +73,7 @@
                                 ^Pair p <- (run-monad m comp)
                                 (return (Pair. (first (fst p))
                                                ((second (fst p)) (snd p)))))
-                       (let [^Pair p (run-monad m comp)]
+                       (let [^Pair p (run-monad* m comp)]
                          (Pair. (first (fst p))
                                 ((second (fst p)) (snd p))))))))
 
