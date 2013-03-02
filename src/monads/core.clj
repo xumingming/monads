@@ -18,29 +18,21 @@
 (defn >> [m c]
   (>>= m (fn [_] c)))
 
-(deftype Cont [m f])
-
-(defn run-monad-1 [m computation]
-  (types/mrun computation m))
+(deftype Cont [m f]
+  Object
+  (toString [this] (with-out-str (print [m f]))))
 
 (defn run-monad [m computation]
   (loop [r (types/mrun computation m) stack ()]
-    (condp instance? r      
-      Return (if (seq stack)
-               (recur ((first stack) r) (rest stack))
-               (recur (types/mrun r m) stack))
-      Bind  (if (seq stack)
-               (recur ((first stack) r) (rest stack))
-               (recur (types/mrun r m) stack))
-      Returned  (if (seq stack)
-               (recur ((first stack) r) (rest stack))
-               (recur (types/mrun r m) stack))
+    (condp instance? r
       Cont (let [^Cont r r]
              (recur (types/mrun (.m r) m) (cons (.f r) stack)))
+      Bind (recur (types/mrun r m) stack)
+      Return (recur (types/mrun r m) stack)
+      Returned (recur (types/mrun r m) stack)
       (if (seq stack)
         (recur ((first stack) r) (rest stack))
         r))))
-
 (defmacro monad [& {:as params}]
   `(let [params# (s/rename-keys ~params {:>>= :bind})]
      (assert (:bind params#) (str "monad " ~name " requires a bind operation!"))
@@ -79,3 +71,9 @@
 (defmacro run-mdo [m & exprs]
   `(run-monad ~m (mdo ~@exprs)))
 
+(defmacro tlet [[nm expr & rest] & body]
+  `(->Cont ~expr
+           (fn [~nm]
+             ~@(if (seq rest)
+                 `((tlet ~rest ~@body))
+                 body))))
