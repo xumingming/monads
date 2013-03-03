@@ -39,7 +39,7 @@
 
 (defn run-list* [xs]
   (when (seq xs)
-    (if-let [f (run-monad list-m (first xs))]
+    (if-let [f (seq (run-monad list-m (first xs)))]
       (lazy-seq (cons f (let [r (rest xs)]
                           (loop [f (first r)
                                  rr (rest r)]
