@@ -12,8 +12,18 @@
 (defn return [x]
   (Return. x))
 
+;; (>>= (>>= m f) g) is, or should be, equivalent to
+;; (>>= m (fn [x] (>>= (f x) g)))
+;; and the list monad, sadly, breaks on the first form. so: transform
+;; to second.
+;; this is basically an ugly hack.
 (defn >>= [m f]
-  (Bind. m f))
+  (if (instance? Bind m)    
+    (let [^Bind m m
+          comp (.comp m)
+          mf (.f m)]
+      (Bind. comp (fn [v] (Bind. (mf v) f))))
+    (Bind. m f)))
 
 (defn >> [m c]
   (>>= m (fn [_] c)))
