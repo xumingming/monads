@@ -14,10 +14,10 @@
 (defn append [xs ys]
   (revappend (reverse xs) ys))
 
-(defmonad strict-m
+(defmonad list-m
   :return list
   :bind (fn [m f]
-          (tlet [m m]            
+          (tlet [m m]
             (let [xs (map f m)]
               (tlet [x (first xs)]
                 (append x (rest xs))))))
@@ -27,15 +27,19 @@
                               r (second leftright)]
                          (append l r)))})
 
+(defn mcat [f xs]
+  (lazy-seq (if (not (seq xs))
+              nil
+              (concat (f (first xs)) (mcat f (rest xs))))))
 
 (defn run-list* [xs]
   (when (seq xs)
     (lazy-seq (cons (first xs)
                     (let [r (rest xs)]
-                      (run-strict (concat (run-monad strict-m (first r)) (rest r))))))))
+                      (run-list* (concat (run-monad list-m (first r)) (rest r))))))))
 
 (defn run-list [c]
-  (run-list* (run-monad strict-m c)))
+  (run-list* (run-monad list-m c)))
 
 (deftype Stream [heads tails]
   Object
@@ -127,20 +131,3 @@
     (lazy-seq (cons (stream-first s)
                     (stream->seq (stream-rest s))))))
 
-(defmonad stream-m
-  :return #(stream %)
-  :bind (fn [m f]
-          (tlet [m m]
-            (let [in-m (stream-map f m)
-                  f (stream-first in-m)
-                  rest (stream-rest in-m)]
-              (tlet [f f]
-                (join-stream (stream f rest)))))))
-
-(defn run-stream [^Stream s]
-  (println (stream-first s) s)
-  (lazy-seq (cons (stream-first s)
-                  (let [r (stream-rest x)]
-                    (run-stream
-                     (join-stream (stream (run-monad stream-m (stream-first r))
-                                          (stream-rest r))))))))
