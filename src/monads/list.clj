@@ -102,7 +102,9 @@
     (recur (rest xs) (cons (first xs) ys))
     ys))
 
-;; reverse + revappend takes 
+;; reverse + revappend takes twice the length of xs. (doall (concat xs
+;; ys)) takes length xs + length ys. So this is not always a winner.
+;; But it does win in the only test I've done, so.
 (defn append [xs ys]
   (revappend (reverse xs) ys))
 
