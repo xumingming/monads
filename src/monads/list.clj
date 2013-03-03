@@ -87,3 +87,79 @@
 
 (defn run-list [c]
   (mcat identity (node-seq (run-monad strict-m c) ())))
+
+(deftype Stream [head tails]
+  Object
+  (toString [self] (with-out-str (print [head tails]))))
+
+(defmacro stream [head & [tail]]
+  `(Stream. (atom (list ~head)) (atom [(delay ~tail)])))
+
+(defmacro streams [head & [tail]]
+  `(Stream. (atom ~head) (atom [(delay ~tail)])))
+
+(defn revappend [xs ys]
+  (if (seq xs)
+    (recur (rest xs) (conj ys (first xs)))
+    ys))
+
+(defn append [xs ys]
+  (revappend (reverse xs) ys))
+
+(defn step-stream [^Stream s]
+  (let [head (.head s)
+        tails (.tails s)
+        tail (first @tails)
+        tails (rest @tails)]
+    (if-let [r @tail]
+      (let [^Stream r r
+            r-head (.head r)
+            r-tails @(.tails r)]
+        (if (or (seq tails) (seq r-tails))
+          (let [new-head  (append @head @r-head)
+                new-tails (append tails r-tails)]
+            (reset! head new-head)
+            (reset! (.tails s) new-tails)
+            s)
+          (append @head @r-head)))
+      (if (seq tails)
+        (do (swap! (.tails s) rest) s)
+        @head))))
+
+(defn stream-map [f s]
+  (when-let [^Stream s s]
+    (let [heads @(.head s)
+          tails @(.tails s)]
+      (Stream. (atom (map f heads)) (atom (map #(delay (stream-map f (deref %))) tails))))))
+
+(defn step-if [^Stream s pred]
+  (if (pred @(.head s) @(.tails s))
+    (step-stream s)
+    s))
+
+(defn stream-first [s]
+  (when-let [^Stream s s]
+    (first @(.head s))))
+
+(defn stream-rest [s]
+  (when-let [^Stream s s]
+    (let [r (step-if s (fn [heads tails] (< (count heads) 2)))]
+      (if-not (instance? Stream r)
+        (rest r)
+        (let [^Stream r r]
+          ;; we can't share the tails atom itself, but this lets us at
+          ;; least share the delay it's wrapping.
+          (Stream. (atom (rest @(.head r))) (atom @(.tails r))))))))
+
+(defn stream-cat [s r]
+  (cond
+   (nil? s) r
+   (nil? r) s
+   :else
+   (let [^Stream s s ^Stream r r]     
+     (Stream. (.head s) (atom (conj @(.tails s) (delay r)))))))
+
+(defn stream-realize [s]
+  (if (instance? Stream s)
+    (recur (step-stream s))
+    s))
