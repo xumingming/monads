@@ -21,9 +21,9 @@
 
 (extend-protocol MRun
   Object
-  (mrun [this _] this)
+  (mrun [this _] (Done. this))
   nil
-  (mrun [this _] nil))
+  (mrun [this _] (Done. nil)))
 
 (deftype Return [v]
   Object
@@ -31,7 +31,7 @@
     (with-out-str (print v)))
   MRun
   (mrun [_ m]
-    ((:return m) v)))
+    (Done. ((:return m) v))))
 
 (deftype Returned [v]
   Object
@@ -133,4 +133,4 @@
         (.v cur)
         (recur ((first stack) (.v cur)) (rest stack)))
       Cont 
-      (recur ((.a cur)) (cons (.f cur) stack)))))
+      (recur (.a cur) (cons (.f cur) stack)))))

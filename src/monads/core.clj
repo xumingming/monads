@@ -31,7 +31,7 @@
   (types/mrun computation m))
 
 
-(defn run-monad [m computation]
+#_(defn run-monad [m computation]
   (loop [r (types/mrun computation m) stack ()]
     (condp instance? r
       Cont (let [^Cont r r]
@@ -43,7 +43,7 @@
         (recur ((first stack) r) (rest stack))
         r))))
 
-#_(defn run-monad [m computation]
+(defn run-monad [m computation]
   (types/run-tramp (types/mrun computation m)))
 
 (defmacro monad [& {:as params}]
