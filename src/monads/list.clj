@@ -136,7 +136,10 @@
 
 (defn stream-first [s]
   (when-let [^Stream s s]
-    (first @(.head s))))
+    (let [h @(.head s)]
+      (if (seq h)
+        (first h)
+        (recur (step-stream s))))))
 
 (defn stream-rest [s]
   (when-let [^Stream s s]
