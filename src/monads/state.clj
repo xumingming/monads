@@ -29,15 +29,19 @@
                   {:mfail (fn [str] (Done. (constantly ((-> inner :monadfail :mfail) str))))})
      :monadplus (when (:monadplus inner)
                   (let [i-plus (-> inner :monadplus :mplus)
-                        i-zero (-> inner :monadplus :mzero)]
+                        i-zero (-> inner :monadplus :mzero)
+                        i-catch? (-> inner :monadplus :left-catch?)
+                        i-zero? (-> inner :monadplus :mzero?)]
                     {:mzero (Done. (fn [_] i-zero))
                      :mplus
                      (fn [leftright]
                        (Done.
                         (fn [s]
-                          (tlet [lv (run-state-t* (state-t inner) (first leftright) s)
-                                 rv (run-state-t* (state-t inner) (second leftright) s)]
-                            (i-plus [lv rv])))))}))
+                          (tlet [lv (run-state-t* (state-t inner) (first leftright) s)]
+                            (if (and i-catch? (not (i-zero? lv)))
+                              lv
+                              (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
+                                (i-plus [lv rv])))))))}))
      :monadtrans {:lift (tcurryfn [m s]
                           (run-mdo inner
                                    v <- m

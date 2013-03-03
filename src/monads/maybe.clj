@@ -20,7 +20,9 @@
                  :mplus (fn [lr]
                           (tlet [lv (run-monad* (maybe-t inner) (first lr))]
                             (or lv
-                                (run-monad* (maybe-t inner) (second lr)))))})))
+                                (run-monad* (maybe-t inner) (second lr)))))
+                 :left-catch? true
+                 :mzero? nil?})))
 
 (defmonad maybe-m
   :return just
@@ -34,7 +36,9 @@
                        (tlet [lv (run-monad* maybe-m (first lr))]
                          (if lv
                            lv
-                           (run-monad* maybe-m (second lr)))))})
+                           (run-monad* maybe-m (second lr)))))
+              :left-catch? true
+              :mzero? nil?})
 
 (def m maybe-m)
 (def t maybe-t)

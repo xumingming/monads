@@ -26,7 +26,9 @@
                                      l <- comp
                                      (if (left? l)
                                        (run-monad* (error-t inner) (second lr))
-                                       (Done. (i-return l))))))})))
+                                       (Done. (i-return l))))))
+                 :left-catch? true
+                 :mzero? left?})))
 
 
 (let [fail #(Done. (left %))]
@@ -42,7 +44,9 @@
                          (tlet [lv (run-monad* error-m (first lr))]
                            (if (left? lv)
                              (run-monad* error-m (second lr))
-                             (Done. lv))))}))
+                             (Done. lv))))
+                :left-catch? true
+                :mzero? left?}))
 
 (defn throw-error [e] (Returned. (fn [m]
                                    (Done.
