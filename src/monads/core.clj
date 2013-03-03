@@ -4,7 +4,8 @@
             [the.parsatron :as parsatron]
             [macroparser.bindings :as bindings]
             [macroparser.monads :as parser])
-  (:import [monads.types Return Returned Bind]))
+  (:import [monads.types Return Returned Bind])
+  (:use [monads.types :only [if-instance]]))
 
 (set! *warn-on-reflection* true)
 
@@ -18,9 +19,8 @@
 ;; to second.
 ;; this is basically an ugly hack.
 (defn >>= [m f]
-  (if (instance? Bind m)    
-    (let [^Bind m m
-          comp (.comp m)
+  (if-instance Bind m
+    (let [comp (.comp m)
           mf (.f m)]
       (Bind. comp (fn [v] (Bind. (mf v) f))))
     (Bind. m f)))

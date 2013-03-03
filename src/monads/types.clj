@@ -109,12 +109,28 @@
     (on-just (from-just m))
     on-nothing))
 
+
+(defmacro if-instance [klass m then else]
+  `(if (instance? ~klass ~m)
+     (let [~(with-meta m {:tag klass}) ~m]
+       ~then)
+     ~else))
+
+(defmacro instance-case [obj & clauses]
+  (let [[clauses else] (if (even? (count clauses))
+                         [clauses `(throw (java.lang.IllegalArgumentException.
+                                           (str "No matching clause: " ~(class obj))))]
+                         [(butlast clauses) (last clauses)])]
+    (reduce (fn [else [klass then]] `(if-instance ~klass ~obj ~then ~else))
+            else
+            (reverse (partition 2 clauses)))))
+
 (defn run-tramp [cur]
   (loop [cur cur stack ()]
-    (condp instance? cur
-      Done (let [^Done cur cur]
-             (if (empty? stack)
-               (.v cur)
-               (recur ((first stack) (.v cur)) (rest stack))))
-      Cont (let [^Cont cur cur]
-             (recur ((.a cur)) (cons (.f cur) stack))))))
+    (instance-case cur
+      Done 
+      (if (empty? stack)
+        (.v cur)
+        (recur ((first stack) (.v cur)) (rest stack)))
+      Cont 
+      (recur ((.a cur)) (cons (.f cur) stack)))))
