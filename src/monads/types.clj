@@ -12,7 +12,7 @@
 ;; AFAICT we need a macro so as to delay the evaluation of expr,
 ;; without which this would be pointless.
 (defmacro tlet [[binding expr & rest] & forms]
-  `(Cont. (fn [] ~expr) (fn [~binding] ~@(if (seq rest)
+  `(Cont.  ~expr (fn [~binding] ~@(if (seq rest)
                                          `((tlet ~rest ~@forms))
                                          forms))))
 
@@ -21,9 +21,9 @@
 
 (extend-protocol MRun
   Object
-  (mrun [this _] (Done. this))
+  (mrun [this _] this)
   nil
-  (mrun [this _] (Done. nil)))
+  (mrun [this _] nil))
 
 (deftype Return [v]
   Object
@@ -31,7 +31,7 @@
     (with-out-str (print v)))
   MRun
   (mrun [_ m]
-    (Done. ((:return m) v))))
+    ((:return m) v)))
 
 (deftype Returned [v]
   Object

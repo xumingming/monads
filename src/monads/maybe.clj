@@ -26,13 +26,13 @@
   :bind (fn [m f]
           (if m
             (run-monad* maybe-m (f (from-just m)))
-            (Done. nil)))
-  :monadfail {:mfail (constantly (Done. nothing))}
-  :monadplus {:mzero (Done. nothing)
+            nil))
+  :monadfail {:mfail (constantly nothing)}
+  :monadplus {:mzero nothing
               :mplus (fn [lr]
                        (tlet [lv (run-monad* maybe-m (first lr))]
                          (if lv
-                           (Done. lv)
+                           lv
                            (run-monad* maybe-m (second lr)))))})
 
 (def m maybe-m)

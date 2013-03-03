@@ -4,11 +4,10 @@
             [the.parsatron :as parsatron]
             [macroparser.bindings :as bindings]
             [macroparser.monads :as parser])
-  (:import [monads.types Return Returned Bind])
+  (:import [monads.types Return Returned Bind Cont])
   (:use [monads.types :only [if-instance]]))
 
 (set! *warn-on-reflection* true)
-
 
 (defn return [x]
   (Return. x))
@@ -31,7 +30,20 @@
 (defn run-monad* [m computation]
   (types/mrun computation m))
 
+
 (defn run-monad [m computation]
+  (loop [r (types/mrun computation m) stack ()]
+    (condp instance? r
+      Cont (let [^Cont r r]
+             (recur (types/mrun (.a r) m) (cons (.f r) stack)))
+      Bind (recur (types/mrun r m) stack)
+      Return (recur (types/mrun r m) stack)
+      Returned (recur (types/mrun r m) stack)
+      (if (seq stack)
+        (recur ((first stack) r) (rest stack))
+        r))))
+
+#_(defn run-monad [m computation]
   (types/run-tramp (types/mrun computation m)))
 
 (defmacro monad [& {:as params}]
