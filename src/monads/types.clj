@@ -128,13 +128,14 @@
 (defn run-tramp [cur]
   (loop [cur cur stack ()]
     (instance-case cur
-      Done (if (empty? stack)
-             (.v cur)
-             (let [v (.v cur)]
-               (instance-case v
-                 Done (recur v stack)
-                 Cont (recur v stack)
-                 (recur ((first stack) v) (rest stack)))))
+      Done 
+      (let [v (.v cur)]
+        (instance-case v
+          Done (recur v stack)
+          Cont (recur v stack)
+          (if (empty? stack)
+            v
+            (recur ((first stack) v) (rest stack)))))
       Cont (recur (.a cur) (cons (.f cur) stack))
       (if (empty? stack)
         cur

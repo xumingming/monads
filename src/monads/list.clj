@@ -1,7 +1,7 @@
 (ns monads.list
   (:require [monads.core :refer :all])
   (:import [monads.types Done])
-  (:use [monads.types :only [tlet]]))
+  (:use [monads.types :only [tlet if-instance]]))
 
 
 (defn revappend [xs ys]
@@ -19,10 +19,14 @@
   :return list
   :bind (fn [m f]
           (if (seq m)
-            (let [xs (map f m)]
+            (let [xs (doall (map f m))]
               (tlet [x (run-monad* list-m (first xs))]
                 (Done.
-                 (append x (rest xs)))))
+                 (append x (map (fn [x]
+                                  ;; this is HORRIBLE.
+                                  (if-instance monads.types.Return x
+                                    (.v x)
+                                    x)) (rest xs))))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
               :mplus (fn [leftright]
@@ -37,27 +41,26 @@
 
 (declare run-list)
 
+(defn get-next [xs]
+  (let [r (rest xs)]
+    (loop [f (first r)
+           rr (rest r)]
+      (let [f (run-monad list-m f)]
+        (if (or (not (nil? f)) (not= () f))
+          (do
+            (run-list (tlet [f f]
+                        (append f rr))))
+
+          (if (seq rr)
+            (recur (first rr) (rest rr))
+            nil))))))
+
 (defn run-list* [xs]
   (when (seq xs)
-    (if-let [f (seq (run-monad list-m (first xs)))]
-      (lazy-seq (cons f (let [r (rest xs)]
-                          (loop [f (first r)
-                                 rr (rest r)]
-                            (let [f (run-monad list-m f)]
-                              (if (seq f)
-                                (run-list (append f rr))
-                                (if (seq rr)
-                                  (recur (first rr) (rest rr))
-                                  nil)))))))
-      (lazy-seq  (let [r (rest xs)]
-                          (loop [f (first r)
-                                 rr (rest r)]
-                            (let [f (run-monad list-m f)]
-                              (if (seq f)
-                                (run-list (append f rr))
-                                (if (seq rr)
-                                  (recur (first rr) (rest rr))
-                                  nil)))))))))
+    (let [f (run-monad list-m (first xs))]
+      (if (or (not (nil? f)) (not (= () f)))
+        (lazy-seq (cons f (get-next xs)))
+        (lazy-seq (get-next xs))))))
 
 (defn run-list [c]
   (run-list* (run-monad list-m c)))
