@@ -119,7 +119,7 @@
 (defmacro instance-case [obj & clauses]
   (let [[clauses else] (if (even? (count clauses))
                          [clauses `(throw (java.lang.IllegalArgumentException.
-                                           (str "No matching clause: " ~(class obj))))]
+                                           (str "No matching clause: " ~obj ", " (class ~obj))))]
                          [(butlast clauses) (last clauses)])]
     (reduce (fn [else [klass then]] `(if-instance ~klass ~obj ~then ~else))
             else
@@ -128,9 +128,14 @@
 (defn run-tramp [cur]
   (loop [cur cur stack ()]
     (instance-case cur
-      Done 
+      Done (if (empty? stack)
+             (.v cur)
+             (let [v (.v cur)]
+               (instance-case v
+                 Done (recur v stack)
+                 Cont (recur v stack)
+                 (recur ((first stack) v) (rest stack)))))
+      Cont (recur (.a cur) (cons (.f cur) stack))
       (if (empty? stack)
-        (.v cur)
-        (recur ((first stack) (.v cur)) (rest stack)))
-      Cont 
-      (recur (.a cur) (cons (.f cur) stack)))))
+        cur
+        (recur ((first stack) cur) (rest stack))))))

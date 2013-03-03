@@ -30,19 +30,6 @@
 (defn run-monad* [m computation]
   (types/mrun computation m))
 
-
-#_(defn run-monad [m computation]
-  (loop [r (types/mrun computation m) stack ()]
-    (condp instance? r
-      Cont (let [^Cont r r]
-             (recur (types/mrun (.a r) m) (cons (.f r) stack)))
-      Bind (recur (types/mrun r m) stack)
-      Return (recur (types/mrun r m) stack)
-      Returned (recur (types/mrun r m) stack)
-      (if (seq stack)
-        (recur ((first stack) r) (rest stack))
-        r))))
-
 (defn run-monad [m computation]
   (types/run-tramp (types/mrun computation m)))
 
