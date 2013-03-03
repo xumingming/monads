@@ -1,101 +1,7 @@
 (ns monads.list
   (:require [monads.core :refer :all]
-            [monads.util :as u]))
-
-
-(defn flatten-1
-  [seqs]
-  (lazy-seq
-   (when-let [s (seq seqs)]
-     (concat (first s) (flatten-1 (rest s))))))
-
-(defn mcat [f xs]
-  (lazy-seq
-   (if (not (seq xs))
-     nil
-     (concat (f (first xs)) (mcat f (rest xs))))))
-
-(defmonad lazy-m
-  :return list
-  :bind (fn [m f]
-          (mcat (fn [v] (run-monad lazy-m (f v))) m)))
-
-(defn push-tails [s]
-  (if (and (:tails s) (:head s) (-> s :head :tails))
-    (-> s
-        (update-in [:head :tails] concat (:tails s))
-        (dissoc :tails))
-    s))
-
-(defrecord Node [head tails]
-  Object
-  (toString [this] (with-out-str (print [head tails]))))
-
-(declare node-seq)
-(declare strict-m) 
-
-(def _x (atom 0))
-
-(defn node-seq [n tails]
-  (if (instance? Node n)
-    (let [h (:head n)
-          ts (concat tails (:tails n))]
-      (if (instance? Node h)
-        (recur h ts)
-        (lazy-seq (let [x (run-monad strict-m (first ts))]
-                    (cons h (node-seq x (rest ts)))))))
-    (if (seq tails)
-      (do #_(println "tails is ..." tails "\n" (seq tails))
-          #_(println (run-monad strict-m (first tails)) (rest tails))
-          (lazy-seq (cons n (node-seq (run-monad strict-m (first tails)) (rest tails)))))
-      n)))
-
-(defmonad strict-m
-  :return list
-  :bind (fn [m f]
-          (tlet [m m]            
-            (let [xs (map f m)]
-              (reduce (fn [m-acc m]
-                        (tlet [ms m-acc
-                               mval m]
-                          (concat ms mval)))
-                      ()
-                      xs))))
-  :monadplus {:mzero ()
-              :mplus (fn [leftright]
-                       (tlet [l (first leftright)
-                              r (second leftright)]
-                         (concat l r)))})
-
-
-(defmonad strict-m
-  :return list
-  :bind (fn [m f]
-          (->Cont m
-                  (fn [m]
-                    (let [xs (map f (if (seq? m) m (mcat identity (node-seq m ()))))]
-                      (reduce (fn [m-acc m]
-                                (->Cont m
-                                        (fn [mval]
-                                          (Node. mval [(->Cont m-acc identity)]))))
-                              ()
-                              (reverse xs))))))
-  :monadplus {:mzero ()
-              :mplus (fn [leftright]
-                       (concat (run-monad strict-m (first leftright))
-                               (run-monad strict-m (second leftright))))})
-
-(defn run-list [c]
-  (mcat identity (node-seq (run-monad strict-m c) ())))
-
-(deftype Stream [heads tails]
-  Object
-  (toString [self] (with-out-str (print [heads tails]))))
-
-;; given the sequential reset!s in step-stream, the atoms here should
-;; really probably be refs.
-(defmacro stream [head & [tail]]
-  `(Stream. (atom (list ~head)) (atom [(delay ~tail)])))
+            [monads.util :as u])
+  (:import [monads.core Cont]))
 
 (defn revappend [xs ys]
   (if (seq xs)
@@ -107,6 +13,41 @@
 ;; But it does win in the only test I've done, so.
 (defn append [xs ys]
   (revappend (reverse xs) ys))
+
+(defmonad strict-m
+  :return list
+  :bind (fn [m f]
+          (tlet [m m]            
+            (let [xs (map f m)]
+              (tlet [x (first xs)]
+                (append x (rest xs))))))
+  :monadplus {:mzero ()
+              :mplus (fn [leftright]
+                       (tlet [l (first leftright)
+                              r (second leftright)]
+                         (append l r)))})
+
+
+(defn run-list* [xs]
+  (when (seq xs)
+    (lazy-seq (cons (first xs)
+                    (let [r (rest xs)]
+                      (run-strict (concat (run-monad strict-m (first r)) (rest r))))))))
+
+(defn run-list [c]
+  (run-list* (run-monad strict-m c)))
+
+(deftype Stream [heads tails]
+  Object
+  (toString [self] (with-out-str (print [heads tails]))))
+
+;; given the sequential reset!s in step-stream, the atoms here should
+;; really probably be refs.
+(defmacro stream [head & [tail]]
+  `(Stream. (atom (list ~head)) (atom [(delay ~tail)])))
+(defmacro streams [heads & [tail]]
+  `(Stream. (atom ~heads) (atom [(delay ~tail)])))
+
 
 (defn step-stream [^Stream s]
   (let [head (.heads s)
@@ -142,15 +83,20 @@
 (defn stream-first [s]
   (when-let [^Stream s s]
     (let [h @(.heads s)]
+      (println h)
       (if (seq h)
-        (first h)
-        (recur (step-stream s))))))
+        (first h)        
+        (let [n (step-stream s)]
+          (if (seq n)
+            (recur n)
+            n))))))
 
 (defn stream-rest [s]
   (when-let [^Stream s s]
+    (stream-first s)
     (let [r (step-if s (fn [heads tails] (< (count heads) 2)))]
       (if-not (instance? Stream r)
-        (rest r)
+        (streams (rest r))
         (let [^Stream r r]
           ;; we can't share the tails atom itself.
           ;; we do share the delay it's wrapping.
@@ -164,6 +110,13 @@
    (let [^Stream s s ^Stream r r]     
      (Stream. (.heads s) (atom (conj @(.tails s) (delay r)))))))
 
+(defn join-stream [s]
+  (when-let [^Stream s s]
+    (let [hs @(.heads s)
+          ^Stream catted (reduce stream-cat nil hs)]
+      (swap! (.tails catted) append @(.tails s))
+      catted)))
+
 (defn stream-realize [s]
   (if (instance? Stream s)
     (recur (step-stream s))
@@ -173,3 +126,21 @@
   (when (instance? Stream s)
     (lazy-seq (cons (stream-first s)
                     (stream->seq (stream-rest s))))))
+
+(defmonad stream-m
+  :return #(stream %)
+  :bind (fn [m f]
+          (tlet [m m]
+            (let [in-m (stream-map f m)
+                  f (stream-first in-m)
+                  rest (stream-rest in-m)]
+              (tlet [f f]
+                (join-stream (stream f rest)))))))
+
+(defn run-stream [^Stream s]
+  (println (stream-first s) s)
+  (lazy-seq (cons (stream-first s)
+                  (let [r (stream-rest x)]
+                    (run-stream
+                     (join-stream (stream (run-monad stream-m (stream-first r))
+                                          (stream-rest r))))))))
