@@ -99,9 +99,10 @@
 
 (defn revappend [xs ys]
   (if (seq xs)
-    (recur (rest xs) (conj ys (first xs)))
+    (recur (rest xs) (cons (first xs) ys))
     ys))
 
+;; reverse + revappend takes 
 (defn append [xs ys]
   (revappend (reverse xs) ys))
 
