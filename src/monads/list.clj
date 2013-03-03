@@ -95,9 +95,6 @@
 (defmacro stream [head & [tail]]
   `(Stream. (atom (list ~head)) (atom [(delay ~tail)])))
 
-(defmacro streams [head & [tail]]
-  `(Stream. (atom ~head) (atom [(delay ~tail)])))
-
 (defn revappend [xs ys]
   (if (seq xs)
     (recur (rest xs) (conj ys (first xs)))
@@ -163,3 +160,8 @@
   (if (instance? Stream s)
     (recur (step-stream s))
     s))
+
+(defn stream->seq [s]
+  (when (instance? Stream s)
+    (lazy-seq (cons (stream-first s)
+                    (stream->seq (stream-rest s))))))
