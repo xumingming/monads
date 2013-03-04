@@ -41,19 +41,20 @@
 
 (declare run-list)
 
+;; omg this is the worst.
 (defn get-next [xs]
   (let [r (rest xs)]
     (loop [f (first r)
            rr (rest r)]
-      (let [f (run-monad list-m f)]
-        (if (or (not (nil? f)) (not= () f))
-          (do
-            (run-list (tlet [f f]
-                        (append f rr))))
-
-          (if (seq rr)
-            (recur (first rr) (rest rr))
-            nil))))))
+      (let [f-was (or (seq? f) (nil? f))
+            f (run-monad list-m f)]
+        (cond
+         (and (not (nil? f)) (not= () f))
+         (if (not f-was) (run-list (append f rr))
+             (lazy-seq (cons f (get-next r))))
+         (seq rr)
+         (recur (first rr) (rest rr))
+         :else nil)))))
 
 (defn run-list* [xs]
   (when (seq xs)
