@@ -19,7 +19,7 @@
   :return list
   :bind (fn [m f]
           (if (seq m)
-            (let [xs (doall (map f m))]
+            (let [xs (map f m)]
               (tlet [x (run-monad* list-m (first xs))]
                 (Done.
                  (append x (map (fn [x]
