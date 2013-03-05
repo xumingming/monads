@@ -23,8 +23,11 @@
             (let [xs (map f m)]
               (println "xs:" xs)
               (tlet [x (run-monad* list-m (first xs))]
-                (Done.
-                 (append x (rest xs)))))
+                (println x (seq x) (rest xs))
+                (if (seq x)
+                  (Done.
+                   (append x (rest xs)))
+                  (Done. (rest xs)))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
               :mplus (fn [leftright]
@@ -44,8 +47,7 @@
   (let [r (rest xs)]
     (loop [f (first r)
            rr (rest r)]
-      (let [f' f
-            f (run-monad list-m f)]
+      (let [f (run-monad list-m f)]
         (cond
          (and (not (nil? f)) (not= () f))
          
@@ -55,11 +57,13 @@
          :else nil)))))
 
 (defn run-list* [xs]
+  (println xs)
   (when (seq xs)
     (let [f (first xs)]
-      (if (or (not (nil? f)) (not (= () f)))
+      (println f)
+      (if (and (not (nil? f)) (not (= () f)))
         (lazy-seq (cons f (get-next xs)))
-        (lazy-seq (get-next xs))))))
+        (run-list (rest xs))))))
 
 (defn run-list [c]
   (run-list* (run-monad list-m c)))
