@@ -1,6 +1,6 @@
 (ns monads.list
   (:require [monads.core :refer :all])
-  (:import [monads.types Done])
+  (:import [monads.types Done Bind])
   (:use [monads.types :only [tlet if-instance]]))
 
 
@@ -18,15 +18,13 @@
 (defmonad list-m
   :return list
   :bind (fn [m f]
-          (if (seq m)
+          (println "m:" m)
+          (if (seq m)            
             (let [xs (map f m)]
+              (println "xs:" xs)
               (tlet [x (run-monad* list-m (first xs))]
                 (Done.
-                 (append x (map (fn [x]
-                                  ;; this is HORRIBLE.
-                                  (if-instance monads.types.Return x
-                                    (.v x)
-                                    x)) (rest xs))))))
+                 (append x (rest xs)))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
               :mplus (fn [leftright]
@@ -46,19 +44,19 @@
   (let [r (rest xs)]
     (loop [f (first r)
            rr (rest r)]
-      (let [f-was (or (seq? f) (nil? f))
+      (let [f' f
             f (run-monad list-m f)]
         (cond
          (and (not (nil? f)) (not= () f))
-         (if (not f-was) (run-list (append f rr))
-             (lazy-seq (cons f (get-next r))))
+         
+         (run-list (append f rr))
          (seq rr)
          (recur (first rr) (rest rr))
          :else nil)))))
 
 (defn run-list* [xs]
   (when (seq xs)
-    (let [f (run-monad list-m (first xs))]
+    (let [f (first xs)]
       (if (or (not (nil? f)) (not (= () f)))
         (lazy-seq (cons f (get-next xs)))
         (lazy-seq (get-next xs))))))
