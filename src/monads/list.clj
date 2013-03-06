@@ -57,11 +57,14 @@
 
 (defn run-list [c]
   (let [run (run-monad list-m c)
-        run (if (keep-going? (first run)) (loop [f (first run) remainder (rest run)]
-                                            (if (keep-going? f)
-                                              (recur (run-monad list-m f) remainder)
-                                              (cons (first f) (append (rest f) remainder))))
-                run)]
+        run (if (keep-going? (first run))
+              (loop [f (first run) remainder (rest run)]
+                (if (keep-going? f)
+                  (recur (run-monad list-m f) remainder)
+                  ;; NB: this is *not* the same as (append f remainder).
+                  ;; to see this, let f be nil.
+                  (cons (first f) (append (rest f) remainder))))
+              run)]
     (when (seq run)
       (let [f (run-monad list-m (first run))]
         (if (and (not (nil? f)) (not= () f))
