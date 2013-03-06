@@ -55,13 +55,6 @@
          (recur (first rr) (rest rr))
          :else nil)))))
 
-(defn run-list* [xs]
-  (when (seq xs)
-    (let [f (run-monad list-m (first xs))]
-      (if (and (not (nil? f)) (not (= () f)))
-        (lazy-seq (cons f (get-next xs)))
-        (run-list (rest xs))))))
-
 (defn run-list [c]
   (let [run (run-monad list-m c)
         run (if (keep-going? (first run)) (loop [f (first run) remainder (rest run)]
