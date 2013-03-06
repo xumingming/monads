@@ -1,6 +1,6 @@
 (ns monads.list
   (:require [monads.core :refer :all])
-  (:import [monads.types Done Bind])
+  (:import [monads.types Done Bind Return])
   (:use [monads.types :only [tlet if-instance]]))
 
 
@@ -20,11 +20,13 @@
   :bind (fn [m f]
           (if (seq m)            
             (let [xs (map f m)]
+              (println "xs:"  xs)
               (tlet [x (run-monad* list-m (first xs))]
-                (if (seq x)
-                  (Done.
-                   (append x (rest xs)))
-                  (Done. (rest xs)))))
+                (println "x:" x)
+                (if (nil? x) (println "x is nil!"))
+                
+                (Done.
+                 (append x (rest xs)))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
               :mplus (fn [leftright]
@@ -38,6 +40,10 @@
                               nil)))))})
 
 (declare run-list)
+
+(defn keep-going? [o]
+  (or (instance? Return o)
+      (instance? Bind o)))
 
 ;; omg this is the worst.
 (defn get-next [xs]
@@ -55,12 +61,21 @@
 
 (defn run-list* [xs]
   (when (seq xs)
-    (let [f (first xs)]
+    (let [f (run-monad list-m (first xs))]
+      (println f)
       (if (and (not (nil? f)) (not (= () f)))
         (lazy-seq (cons f (get-next xs)))
         (run-list (rest xs))))))
 
 (defn run-list [c]
-  (run-list* (run-monad list-m c)))
+  (let [run (run-monad list-m c)
+        _ (println "run:" run)
+        #_run #_(if (keep-going? (first run)) (loop [f (first run) remainder (rest run)]
+                                            (println "f:" )
+                                            (if (keep-going? f)
+                                              (recur (run-monad list-m f) remainder)
+                                              (cons (first f) (append (rest f) remainder))))
+                run)]
+    (run-list* (run-monad list-m c))))
 
 (def m list-m)
