@@ -20,11 +20,7 @@
   :bind (fn [m f]
           (if (seq m)            
             (let [xs (map f m)]
-              (println "xs:"  xs)
               (tlet [x (run-monad* list-m (first xs))]
-                (println "x:" x)
-                (if (nil? x) (println "x is nil!"))
-                
                 (Done.
                  (append x (rest xs)))))
             (Done. nil)))
@@ -62,20 +58,21 @@
 (defn run-list* [xs]
   (when (seq xs)
     (let [f (run-monad list-m (first xs))]
-      (println f)
       (if (and (not (nil? f)) (not (= () f)))
         (lazy-seq (cons f (get-next xs)))
         (run-list (rest xs))))))
 
 (defn run-list [c]
   (let [run (run-monad list-m c)
-        _ (println "run:" run)
-        #_run #_(if (keep-going? (first run)) (loop [f (first run) remainder (rest run)]
-                                            (println "f:" )
+        run (if (keep-going? (first run)) (loop [f (first run) remainder (rest run)]
                                             (if (keep-going? f)
                                               (recur (run-monad list-m f) remainder)
                                               (cons (first f) (append (rest f) remainder))))
                 run)]
-    (run-list* (run-monad list-m c))))
+    (when (seq run)
+      (let [f (run-monad list-m (first run))]
+        (if (and (not (nil? f)) (not= () f))
+          (lazy-seq (cons f (get-next run)))
+          (recur (rest run)))))))
 
 (def m list-m)
