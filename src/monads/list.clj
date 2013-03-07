@@ -61,14 +61,14 @@
               (loop [f (first run) remainder (rest run)]
                 (if (keep-going? f)
                   (recur (run-monad list-m f) remainder)
-                  ;; NB: this is *not* the same as (append f remainder).
-                  ;; to see this, let f be nil.
-                  (cons (first f) (append (rest f) remainder))))
+                  (let [r (append f remainder)]
+                    (if (keep-going? (first r))
+                      (recur (first r) (rest r))
+                      r))))
               run)]
     (when (seq run)
-      (let [f (run-monad list-m (first run))]
-        (if (and (not (nil? f)) (not= () f))
+      (let [f (first run)]
           (lazy-seq (cons f (get-next run)))
-          (recur (rest run)))))))
+          ))))
 
 (def m list-m)
