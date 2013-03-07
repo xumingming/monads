@@ -5,7 +5,7 @@
         monads.maybe
         monads.types
         monads.util
-        monads.identity
+        [monads.identity :only [identity-m]]
         expectations))
 
 (given [m] (do (expect nil (run-monad m mzero))

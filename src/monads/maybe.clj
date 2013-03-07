@@ -12,15 +12,16 @@
              (run-mdo inner
                       v <- m
                       (if (nothing? v)
-                        (i-return nothing)
+                        (return nothing)
                         (run-monad* (maybe-t inner) (f (from-just v))))))
      :monadfail {:mfail (fn [_] (i-return nothing))}
      :monadtrans {:lift (partial lift-m just)}
-     :monadplus {:mzero (i-return nothing)
+     :monadplus {:mzero (Done. (i-return nothing))
                  :mplus (fn [lr]
                           (tlet [lv (run-monad* (maybe-t inner) (first lr))]
-                            (or lv
-                                (run-monad* (maybe-t inner) (second lr)))))
+                            (if lv
+                              (Done. lv)
+                              (run-monad* (maybe-t inner) (second lr)))))
                  :left-catch? true
                  :mzero? nil?})))
 
@@ -29,13 +30,13 @@
   :bind (fn [m f]
           (if m
             (run-monad* maybe-m (f (from-just m)))
-            nil))
+            (Done. nil)))
   :monadfail {:mfail (constantly nothing)}
-  :monadplus {:mzero nothing
+  :monadplus {:mzero (Done. nothing)
               :mplus (fn [lr]
                        (tlet [lv (run-monad* maybe-m (first lr))]
                          (if lv
-                           lv
+                           (Done. lv)
                            (run-monad* maybe-m (second lr)))))
               :left-catch? true
               :mzero? nil?})
