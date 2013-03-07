@@ -137,6 +137,8 @@
             v
             (recur ((first stack) v) (rest stack)))))
       Cont (recur (.a cur) (cons (.f cur) stack))
+      cur
+
       #_(if (empty? stack)
         cur
         (recur ((first stack) cur) (rest stack))))))
