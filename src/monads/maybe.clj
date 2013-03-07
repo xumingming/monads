@@ -9,11 +9,11 @@
     (monad
      :return (fn [x] (i-return (just x)))
      :bind (fn [m f]
-             (run-mdo inner
-                      v <- m
-                      (if (nothing? v)
-                        (return nothing)
-                        (run-monad* (maybe-t inner) (f (from-just v))))))
+             (run-monad* inner
+                         (mdo v <- m
+                              (if (nothing? v)
+                                (return nothing)
+                                (run-monad* (maybe-t inner) (f (from-just v)))))))
      :monadfail {:mfail (fn [_] (i-return nothing))}
      :monadtrans {:lift (partial lift-m just)}
      :monadplus {:mzero (Done. (i-return nothing))
