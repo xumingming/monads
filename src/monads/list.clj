@@ -16,6 +16,8 @@
 
 (declare list-m)
 
+(def run-list (partial run-monad list-m))
+
 (defn get-next [xs]
   (let [r (rest xs)]
     (loop [f (first r)
@@ -49,5 +51,3 @@
                               nil)))))})
 
 (def m list-m)
-
-(def run-list (partial run-monad list-m))
