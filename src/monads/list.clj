@@ -1,8 +1,9 @@
 (ns monads.list
   (:require [monads.core :refer :all])
-  (:import [monads.types Done Bind Return])
+  (:import [monads.types Done Bind Return Cont])
   (:use [monads.types :only [tlet if-instance]]))
 
+(declare run-list)
 
 (defn revappend [xs ys]
   (if (seq xs)
@@ -35,13 +36,12 @@
                               (append [(first res)] (map return (rest res)))
                               nil)))))})
 
-(declare run-list)
-
+;; omg this is the worst.
 (defn keep-going? [o]
   (or (instance? Return o)
-      (instance? Bind o)))
+      (instance? Bind o)
+      (instance? Cont o)))
 
-;; omg this is the worst.
 (defn get-next [xs]
   (let [r (rest xs)]
     (loop [f (first r)
