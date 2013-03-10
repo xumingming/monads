@@ -15,21 +15,58 @@
   (revappend (reverse xs) ys))
 
 (declare list-m)
+(declare run-list)
+
 
 (defn keep-going? [o]
   (or (instance? Return o)
       (instance? Bind o)))
+
+
+(defn get-next [xs]
+  (let [r (rest xs)]
+    (loop [f (first r)
+           rr (rest r)]
+      (let [f (run-monad list-m f)]
+        (cond
+         (and (not (nil? f)) (not= () f))
+         (run-list (append f rr))
+         (seq rr)
+         (recur (first rr) (rest rr))
+         :else nil)))))
+
+(defn run-list [c]
+  (let [run (run-monad list-m c)
+        run (if (keep-going? (first run))
+              (loop [f (first run) remainder (rest run)]
+                (if (keep-going? f)
+                  (recur (run-monad list-m f) remainder)
+                  (let [r (append f remainder)]
+                    (if (keep-going? (first r))
+                      (recur (first r) (rest r))
+                      r))))
+              run)]
+    (when (seq run)
+      (let [f (first run)]
+          (lazy-seq (cons f (get-next run)))
+          ))))
+
+(defn mcat [f xs]
+  (lazy-seq
+   (if (not (seq xs))
+     nil
+     (append (f (first xs)) (mcat f (rest xs))))))
 
 (defmonad list-m
   :return list
   :bind (fn [m f]
           (if (seq m)
             (tlet [x (run-monad* list-m (f (first m)))]
-              (let [rs (map #(instance-case %
+              (let [rs (mcat #(instance-case %
                                Return [(.v %)]
                                Cont (run-list %)
                                [%]) (rest m))
-                    rs (map f (apply concat rs))]
+                    rs (map f rs)]
                 (Done. (append x rs))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
@@ -45,15 +82,3 @@
 
 (def m list-m)
 
-
-(defn get-next [xs]
-  (let [r (rest xs)]
-    (loop [f (first r)
-           rr (rest r)]
-      (let [f (run-monad list-m f)]
-        (cond
-         (and (not (nil? f)) (not= () f))
-         (run-list (append f rr))
-         (seq rr)
-         (recur (first rr) (rest rr))
-         :else nil)))))
