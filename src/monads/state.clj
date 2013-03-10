@@ -39,7 +39,7 @@
                         (fn [s]
                           (tlet [lv (run-state-t* (state-t inner) (first leftright) s)]
                             (if (and i-catch? (not (i-zero? lv)))
-                              lv
+                              (Done. lv)
                               (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
                                 (i-plus [lv rv])))))))}))
      :monadtrans {:lift (tcurryfn [m s]
