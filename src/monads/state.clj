@@ -21,10 +21,11 @@
              (Done.
               (fn [s]
                 (tlet [comp (m s)]
-                  (run-mdo inner
-                           ^Pair p <- comp
-                           let v = (fst p), s = (snd p)
-                           (run-state-t* (state-t inner) (f v) s))))))
+                  (run-monad* inner
+                              (mdo
+                               ^Pair p <- comp
+                               let v = (fst p), s = (snd p)
+                               (run-state-t* (state-t inner) (f v) s)))))))
      :monadfail (when (:monadfail inner)
                   {:mfail (fn [str] (Done. (constantly ((-> inner :monadfail :mfail) str))))})
      :monadplus (when (:monadplus inner)
