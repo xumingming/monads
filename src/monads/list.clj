@@ -18,8 +18,8 @@
 (defmonad list-m
   :return list
   :bind (fn [m f]
-          (if (seq m)            
-            (let [xs (map f m)]
+          (if (seq m)
+            (let [xs (map (comp  f #(if-instance Return % (.v %) %)) m)]
               (tlet [x (run-monad* list-m (first xs))]
                 (Done.
                  (append x (rest xs)))))
@@ -49,7 +49,6 @@
       (let [f (run-monad list-m f)]
         (cond
          (and (not (nil? f)) (not= () f))
-         
          (run-list (append f rr))
          (seq rr)
          (recur (first rr) (rest rr))
