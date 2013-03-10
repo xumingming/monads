@@ -18,27 +18,31 @@
                     {:mfail (fn [msg]
                               (ifail msg))}))
      :monadtrans {:lift (fn [m]
-                          (run-mdo inner
-                                   a <- m
-                                   (return (Pair. a nil))))}
+                          (run-mdo* inner
+                                    a <- m
+                                    (return (Pair. a nil))))}
      :monadplus (when (:monadplus inner)
                   (let [i-plus (-> inner :monadplus :mplus)
-                        i-zero (-> inner :monadplus :mzero)]
+                        i-zero (-> inner :monadplus :mzero)
+                        i-catch? (-> inner :monadplus :left-catch?)
+                        i-zero? (-> inner :monadpluse :mzero?)]
                     {:mzero i-zero
                      :mplus (fn [lr]
-                              (i-plus (lazy-pair
-                                       (run-monad (writer-t inner) (first lr))
-                                       (run-monad (writer-t inner) (second lr)))))}))
+                              (tlet [lv (run-monad* (writer-t inner) (first lr))]
+                                (if (and i-catch? (not (i-zero? lv)))
+                                  lv
+                                  (tlet [rv (run-monad* (writer-t inner) (second lr))]
+                                    (i-plus [lv rv])))))}))
      :bind (fn [m f]
              (tlet [wrapped-p (run-monad* (writer-t inner) m)]
-               (run-mdo inner
+               (run-mdo* inner
                         ^Pair p <- wrapped-p
                         let a = (fst p), b = (snd p)
                         (tlet [wrapped-p (run-monad* (writer-t inner) (f a))]
                           (run-monad* inner (mdo
                                              ^Pair p <- wrapped-p
                                              (return (Pair. (fst p) (<> b (snd p)))))))))
-))))
+             ))))
 
 (def writer-t (memoize writer-t*))
 
