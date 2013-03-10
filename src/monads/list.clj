@@ -1,7 +1,7 @@
 (ns monads.list
   (:require [monads.core :refer :all])
   (:import [monads.types Done Bind Return Cont])
-  (:use [monads.types :only [tlet if-instance]]))
+  (:use [monads.types :only [tlet instance-case]]))
 
 (defn revappend [xs ys]
   (if (seq xs)
@@ -16,28 +16,21 @@
 
 (declare list-m)
 
-(def run-list (partial run-monad list-m))
-
-(defn get-next [xs]
-  (let [r (rest xs)]
-    (loop [f (first r)
-           rr (rest r)]
-      (let [f (run-monad list-m f)]
-        (cond
-         (and (not (nil? f)) (not= () f))
-         (run-list (append f rr))
-         (seq rr)
-         (recur (first rr) (rest rr))
-         :else nil)))))
+(defn keep-going? [o]
+  (or (instance? Return o)
+      (instance? Bind o)))
 
 (defmonad list-m
   :return list
   :bind (fn [m f]
           (if (seq m)
-            (let [xs (map (comp  f #(if-instance Return % (.v %) %)) m)]
-              (tlet [x (run-monad* list-m (first xs))]
-                (Done.
-                 (append x (get-next xs)))))
+            (tlet [x (run-monad* list-m (f (first m)))]
+              (let [rs (map #(instance-case %
+                               Return [(.v %)]
+                               Cont (run-list %)
+                               [%]) (rest m))
+                    rs (map f (apply concat rs))]
+                (Done. (append x rs))))
             (Done. nil)))
   :monadplus {:mzero (Done. ())
               :mplus (fn [leftright]
@@ -51,3 +44,16 @@
                               nil)))))})
 
 (def m list-m)
+
+
+(defn get-next [xs]
+  (let [r (rest xs)]
+    (loop [f (first r)
+           rr (rest r)]
+      (let [f (run-monad list-m f)]
+        (cond
+         (and (not (nil? f)) (not= () f))
+         (run-list (append f rr))
+         (seq rr)
+         (recur (first rr) (rest rr))
+         :else nil)))))
