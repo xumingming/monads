@@ -13,20 +13,20 @@
      :inner inner
      :return (comp i-return right)
      :bind (fn [m f]
-             (run-mdo inner 
-                      x <- (run-monad (error-t inner) m)
-                      (either fail
-                              #(run-monad* (error-t inner) (f %)) x)))
+             (run-mdo* inner
+                       x <- (run-monad (error-t inner) m)
+                       (either fail
+                               #(run-monad* (error-t inner) (f %)) x)))
      :monadtrans {:lift (fn [m] (run-monad* inner (>>= m (comp i-return right))))}
      :monadfail {:mfail (comp ->Done i-return left)}
      :monadplus {:mzero (Done. (i-return (left nil)))
                  :mplus (fn [lr]
                           (tlet [comp (run-monad* (error-t inner) (first lr))]
-                            (run-mdo inner
-                                     l <- comp
-                                     (if (left? l)
-                                       (run-monad* (error-t inner) (second lr))
-                                       (Done. (i-return l))))))
+                            (run-mdo* inner
+                                      l <- comp
+                                      (if (left? l)
+                                        (run-monad* (error-t inner) (second lr))
+                                        (Done. (i-return l))))))
                  :left-catch? true
                  :mzero? left?})))
 
