@@ -44,9 +44,9 @@
                               (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
                                 (i-plus [lv rv])))))))}))
      :monadtrans {:lift (tcurryfn [m s]
-                          (run-mdo inner
-                                   v <- m
-                                   (return (Pair. v s))))})))
+                          (run-monad* inner (mdo
+                                             v <- m
+                                             (return (Pair. v s)))))})))
 (def state-t (memoize state-t*))
 
 (declare run-state*)
