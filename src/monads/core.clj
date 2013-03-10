@@ -71,3 +71,5 @@
 (defmacro run-mdo [m & exprs]
   `(run-monad ~m (mdo ~@exprs)))
 
+(defmacro run-mdo* [m & exprs]
+  `(run-monad* ~m (mdo ~@exprs)))

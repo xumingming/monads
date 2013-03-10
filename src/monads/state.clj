@@ -21,11 +21,10 @@
              (Done.
               (fn [s]
                 (tlet [comp (m s)]
-                  (run-monad* inner
-                              (mdo
-                               ^Pair p <- comp
-                               let v = (fst p), s = (snd p)
-                               (run-state-t* (state-t inner) (f v) s)))))))
+                  (run-mdo* inner
+                            ^Pair p <- comp
+                            let v = (fst p), s = (snd p)
+                            (run-state-t* (state-t inner) (f v) s))))))
      :monadfail (when (:monadfail inner)
                   {:mfail (fn [str] (Done. (constantly ((-> inner :monadfail :mfail) str))))})
      :monadplus (when (:monadplus inner)
@@ -44,9 +43,9 @@
                               (tlet [rv (run-state-t* (state-t inner) (second leftright) s)]
                                 (i-plus [lv rv])))))))}))
      :monadtrans {:lift (tcurryfn [m s]
-                          (run-monad* inner (mdo
-                                             v <- m
-                                             (return (Pair. v s)))))})))
+                          (run-mdo* inner
+                                    v <- m
+                                    (return (Pair. v s))))})))
 (def state-t (memoize state-t*))
 
 (declare run-state*)
