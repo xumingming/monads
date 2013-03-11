@@ -36,3 +36,15 @@
                            y <- (range 1 30000)
                            (guard (> x 20))
                            (return (list x y))))))
+
+
+(expect [[3 4 5]
+         [5 12 13]
+         [6 8 10]]
+        (take 3 (run-list (mdo
+                           x <- (range 1 30)
+                           y <- (range (inc x) 30)
+                           let x2+y2 = (+ (* x x) (* y y))
+                           z <- (range 1 30)
+                           (guard (== (* z z) x2+y2))
+                           (return (list x y z))))))

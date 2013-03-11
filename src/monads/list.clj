@@ -3,6 +3,12 @@
   (:import [monads.types Done Bind Return Cont])
   (:use [monads.types :only [tlet instance-case]]))
 
+;;; NB this is the most fragile part of this codebase.
+;;; It is slower, and less lazy, than a regular clojure for-loop. If
+;;; you have any significant number of options to explore, use a
+;;; for-loop. This is really only useful if you want to use it with a
+;;; transformer, and even then be very wary the size of your search space.
+
 (defn revappend [xs ys]
   (if (seq xs)
     (recur (rest xs) (cons (first xs) ys))
@@ -17,11 +23,9 @@
 (declare list-m)
 (declare run-list)
 
-
 (defn keep-going? [o]
   (or (instance? Return o)
       (instance? Bind o)))
-
 
 (defn get-next [xs]
   (let [r (rest xs)]
@@ -47,15 +51,13 @@
                       r))))
               run)]
     (when (seq run)
-      (let [f (first run)]
-          (lazy-seq (cons f (get-next run)))
-          ))))
+      (lazy-seq (cons (first run) (get-next run))))))
 
 (defn mcat [f xs]
   (lazy-seq
    (if (not (seq xs))
      nil
-     (append (f (first xs)) (mcat f (rest xs))))))
+     (concat (f (first xs)) (mcat f (rest xs))))))
 
 (defmonad list-m
   :return list
@@ -63,9 +65,9 @@
           (if (seq m)
             (tlet [x (run-monad* list-m (f (first m)))]
               (let [rs (mcat #(instance-case %
-                               Return [(.v %)]
-                               Cont (run-list %)
-                               [%]) (rest m))
+                                Return [(.v %)]
+                                Cont (run-list %)
+                                [%]) (rest m))
                     rs (map f rs)]
                 (Done. (append x rs))))
             (Done. nil)))
